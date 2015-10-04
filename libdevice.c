@@ -44,7 +44,7 @@ __device_t *_device_create_object() {
 	return (__device_t*)malloc(sizeof(__device_t));
 }
 
-__device_t *connect_to_device(int **success) {
+__device_t *connect_to_device(int *success) {
 	struct __device_t *tmp_device = _device_create_object();
 	device_connected = false;
 
@@ -52,12 +52,12 @@ __device_t *connect_to_device(int **success) {
 
 	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
 		if (device_connected) {
-			**success = 1;
+			*success = 1;
 			tmp_device->saved_udid = CFStringGetCStringPtr(AMDeviceCopyDeviceIdentifier(__tmp_device), 0);
 			tmp_device->device = __tmp_device;
 			_device_connect(tmp_device->device);
 		} else {
-			**success = 0;
+			*success = 0;
 		}
 		CFRunLoopStop(CFRunLoopGetCurrent());
 	});
@@ -137,6 +137,12 @@ int remove_app_from_device(__device_t *__device, const char *bundle_identifier) 
 }
 
 const void *get_device_property(__device_t *__device, const char *property) {
-	const void *prop = AMDeviceCopyValue(__device->device, 0, CFStringCreateWithCString(NULL, property, 0));
-	return CFStringGetCStringPtr(prop, 0);
+	CFStringRef prop_ref = CFStringCreateWithCString(NULL, property, 0);
+	const void *prop = AMDeviceCopyValue(__device->device, 0, prop_ref);
+
+	CFRelease(prop_ref);
+	const char *ret_val = CFStringGetCStringPtr(prop, 0);
+	CFRelease(prop);
+
+	return ret_val;
 }
