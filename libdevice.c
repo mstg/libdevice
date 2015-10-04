@@ -24,6 +24,13 @@
 static bool device_connected;
 static struct am_device *__tmp_device;
 
+void _device_connect(struct am_device *__device) {
+	AMDeviceConnect(__device);
+	AMDeviceIsPaired(__device);
+	AMDeviceValidatePairing(__device);
+	AMDeviceStartSession(__device);
+}
+
 static void device_connected_callback(struct am_device_notification_callback_info *cb_info, int arg) {
 	if (cb_info->msg == ADNCI_MSG_CONNECTED) {
 		device_connected = true;
@@ -48,6 +55,7 @@ __device_t *connect_to_device(int **success) {
 			**success = 1;
 			tmp_device->saved_udid = CFStringGetCStringPtr(AMDeviceCopyDeviceIdentifier(__tmp_device), 0);
 			tmp_device->device = __tmp_device;
+			_device_connect(tmp_device->device);
 		} else {
 			**success = 0;
 		}
@@ -62,6 +70,7 @@ void device_free(__device_t *__device) {
 	if (__device) {
 		if (__device->device_notification) {
 			AMDeviceNotificationUnsubscribe(__device->device_notification);
+			AMDeviceRelease(__device->device);
 		}
 		free(__device);
 	}
@@ -81,18 +90,13 @@ int same_device(__device_t *__device) {
 
 int install_app_on_device(__device_t *__device, const char *local_path) {
 	if (!local_path) {
-		return NULL_PATH;
+		return NULL_ARG;
 	}
 
 	int __same = same_device(__device);
 	if (__same != 0) {
 		return -1;
 	}
-
-	AMDeviceConnect(__device->device);
-	AMDeviceIsPaired(__device->device);
-	AMDeviceValidatePairing(__device->device);
-	AMDeviceStartSession(__device->device);
 
 	CFStringRef _path_string = CFStringCreateWithCString(NULL, local_path, 0);
 	CFURLRef _path_url = CFURLCreateWithFileSystemPath(NULL, _path_string, 0, true);
@@ -112,4 +116,27 @@ int install_app_on_device(__device_t *__device, const char *local_path) {
 	CFRelease(_opt_values[0]);
 
 	return installed_;
+}
+
+int remove_app_from_device(__device_t *__device, const char *bundle_identifier) {
+	if (!bundle_identifier) {
+		return NULL_ARG;
+	}
+
+	int __same = same_device(__device);
+	if (__same != 0) {
+		return -1;
+	}
+
+	CFStringRef bundleid = CFStringCreateWithCString(NULL, bundle_identifier, 0);
+	int uninstalled_ = AMDeviceSecureUninstallApplication(0, __device->device, bundleid, 0, NULL, 0);
+
+	CFRelease(bundleid);
+
+	return uninstalled_;
+}
+
+const void *get_device_property(__device_t *__device, const char *property) {
+	const void *prop = AMDeviceCopyValue(__device->device, 0, CFStringCreateWithCString(NULL, property, 0));
+	return CFStringGetCStringPtr(prop, 0);
 }

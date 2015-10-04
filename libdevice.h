@@ -21,15 +21,32 @@
 
 #include "MobileDevice.h"
 
+#define BasebandStatus "BasebandStatus"
+#define BluetoothAddress "BluetoothAddress"
+#define DeviceName "DeviceName"
+#define FirmwareVersion "FirmwareVersion"
+#define IntegratedCircuitCardIdentity "IntegratedCircuitCardIdentity"
+#define InternationalMobileEquipmentIdentity "InternationalMobileEquipmentIdentity"
+#define MLBSerialNumber "MLBSerialNumber"
+#define PhoneNumber "PhoneNumber"
+#define ProductType "ProductType"
+#define SerialNumber "SerialNumber"
+#define SIMStatus "SIMStatus"
+#define TimeZone "TimeZone"
+#define UniqueDeviceID "UniqueDeviceID"
+#define WiFiAddress "WiFiAddress"
+
 typedef struct __device_t {
 	struct am_device *device;
 	struct am_device_notification *device_notification;
 	const char *saved_udid;
 } __device_t;
 
-const int NULL_PATH = -1;
-int install_app_on_device(__device_t *__device, const char *local_path);
+const int NULL_ARG = -1;
 __device_t *connect_to_device();
 void device_free(__device_t *__device);
+int install_app_on_device(__device_t *__device, const char *local_path);
+int remove_app_from_device(__device_t *__device, const char *bundle_identifier);
+const void *get_device_property(__device_t *__device, const char *property);
 
 #endif
